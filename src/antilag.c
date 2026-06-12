@@ -19,6 +19,44 @@ vec3_t antilag_origin;
 vec3_t antilag_retvec;
 float time_corrected;
 
+void antilag_lagmove_all_playeronly(gedict_t *e, float ms);
+
+static int antilag_check_new_projectile_spawn_touch(gedict_t *owner, gedict_t *e, float rewind_time)
+{
+	vec3_t end;
+	float speed;
+
+	if (newmis != e)
+		return false;
+
+	speed = VectorLength(e->s.v.velocity);
+	VectorCopy(e->s.v.origin, end);
+	if (speed > 1)
+	{
+		/*
+		 * Classic newmis performs an immediate 0.05s sweep so close wall/floor
+		 * shots explode before the next server frame. Keep that collision
+		 * reach, but do not commit the travel when the sweep misses.
+		 */
+		VectorMA(end, 0.05, e->s.v.velocity, end);
+	}
+
+	antilag_lagmove_all_playeronly(owner, rewind_time);
+	traceline(PASSVEC3(e->s.v.origin), PASSVEC3(end), false, e);
+
+	if (g_globalvars.trace_fraction < 1 || g_globalvars.trace_startsolid)
+	{
+		trap_setorigin(NUM_FOR_EDICT(e), PASSVEC3(g_globalvars.trace_endpos));
+		other = PROG_TO_EDICT(g_globalvars.trace_ent);
+		self = e;
+		self->s.v.flags = ((int)self->s.v.flags) | FL_GODMODE;
+		((void(*)(void))(self->touch))();
+		return true;
+	}
+
+	return false;
+}
+
 void Physics_PushEntityTrace(float push_x, float push_y, float push_z)
 {
 	vec3_t push;
@@ -624,32 +662,25 @@ void antilag_lagmove_all_proj(gedict_t *owner, gedict_t *e)
 	}
 
 	current_time = g_globalvars.time - ms;
-	// newmis reimplementation
-	if (newmis == e)
+	if (antilag_check_new_projectile_spawn_touch(owner, e, g_globalvars.time - current_time))
 	{
-		antilag_lagmove_all_playeronly(owner, (g_globalvars.time - current_time));
-		traceline(PASSVEC3(e->s.v.origin), e->s.v.origin[0] + e->s.v.velocity[0] * 0.05, e->s.v.origin[1] + e->s.v.velocity[1] * 0.05, e->s.v.origin[2] + e->s.v.velocity[2] * 0.05, false, e);
-		trap_setorigin(NUM_FOR_EDICT(e), PASSVEC3(g_globalvars.trace_endpos));
-
-		if (g_globalvars.trace_fraction < 1 || g_globalvars.trace_startsolid)
-		{
-			other = PROG_TO_EDICT(g_globalvars.trace_ent);
-			self = e;
-			self->s.v.flags = ((int)self->s.v.flags) | FL_GODMODE;
-			((void(*)(void))(self->touch))();
-
-			self = oself;
-			antilag_unmove_all(); // emergency antilag cleanup
-			return;
-		}
+		self = oself;
+		antilag_unmove_all(); // emergency antilag cleanup
+		return;
 	}
-	//
 
 	// actual stepping through
-	while (current_time <= g_globalvars.time)
+	while (current_time < g_globalvars.time)
 	{
+		float remaining = g_globalvars.time - current_time;
+
+		if (remaining <= 0)
+			break;
+
 		time_corrected = current_time;
-		step_time = bound(0.01, min(step_time, (g_globalvars.time - current_time) - 0.01), 0.05);
+		step_time = min(step_time, remaining);
+		if (step_time <= 0)
+			break;
 		if (e->s.v.nextthink) { e->s.v.nextthink -= step_time; }
 
 		//antilag_lagmove_all_nohold(owner, (g_globalvars.time - current_time), false);
@@ -743,18 +774,18 @@ void antilag_lagmove_all_proj_bounce(gedict_t *owner, gedict_t *e)
 	}
 
 	current_time = g_globalvars.time - ms;
-	// newmis reimplementation
-	if (newmis == e)
-	{
-		antilag_lagmove_all_playeronly(owner, (g_globalvars.time - current_time));
-		Physics_Bounce(0.05);
-	}
-	//
 
 	// actual step through
 	while (current_time < g_globalvars.time)
 	{
-		step_time = bound(0.01, min(step_time, (g_globalvars.time - current_time) - 0.01), 0.05);
+		float remaining = g_globalvars.time - current_time;
+
+		if (remaining <= 0)
+			break;
+
+		step_time = min(step_time, remaining);
+		if (step_time <= 0)
+			break;
 		
 		antilag_lagmove_all_playeronly(owner, (g_globalvars.time - current_time));
 		Physics_Bounce(step_time);
@@ -768,13 +799,6 @@ void antilag_lagmove_all_proj_bounce(gedict_t *owner, gedict_t *e)
 	// restore origins to held values
 	antilag_unmove_all();
 }
-
-
-
-
-
-
-
 
 
 

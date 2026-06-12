@@ -1,9 +1,24 @@
 
 
 
-#define NENT_PROJECTILE		10
-#define NENT_WEAPONPRED		20
+#define EZCSQC_WEAPONINFO	1
+#define EZCSQC_PROJECTILE	2
+#define EZCSQC_WEAPONDEF	4
 
+#define PROJECTILE_ORIGIN		(1 << 0)
+#define PROJECTILE_MODEL		(1 << 1)
+#define PROJECTILE_ANGLES		(1 << 2)
+#define PROJECTILE_OWNER		(1 << 3)
+#define PROJECTILE_SPAWN_ORIGIN	(1 << 4)
+
+#define WEAPONDEF_INIT		(1 << 0)
+#define WEAPONDEF_FLAGS		(1 << 1)
+#define WEAPONDEF_ANIM		(1 << 2)
+
+#define WEPPREDANIM_SOUND		0x0001
+#define WEPPREDANIM_PROJECTILE	0x0002
+#define WEPPREDANIM_BRANCH		0x0040
+#define WEPPREDANIM_MOREBYTES	0x0080
 
 string 	autocvar_r_rockettrail;
 string 	autocvar_r_grenadetrail;
@@ -125,7 +140,7 @@ void EntUpdate_Projectile(float is_new)
 {
 	int sendflags = ReadByte();
 	
-	if (sendflags & 1)
+	if (sendflags & PROJECTILE_ORIGIN)
 	{
 		self.s_origin = [ReadCoord(), ReadCoord(), ReadCoord()];
 		self.velocity = [ReadCoord(), ReadCoord(), ReadCoord()];
@@ -133,7 +148,7 @@ void EntUpdate_Projectile(float is_new)
 	}
 	
 	
-	if (sendflags & 2)
+	if (sendflags & PROJECTILE_MODEL)
 	{
 		// Reki: note- we need to do this monstrosity of a setmodel because setmodelindex doesn't return modelflags
 		setmodel(self, modelnameforindex(ReadShort()));	
@@ -141,17 +156,22 @@ void EntUpdate_Projectile(float is_new)
 	}
 	
 	
-	if (sendflags & 4)
+	if (sendflags & PROJECTILE_ANGLES)
 	{
 		self.angles = [ReadAngle(), ReadAngle(), ReadAngle()];
 	}
 	
 	
-	float antilag_time = 0;
-	if (sendflags & 8)
+	if (sendflags & PROJECTILE_OWNER)
 	{
 		self.ownnum = ReadEntityNum();
-		antilag_time = (float)ReadByte() / 255;
+	}
+
+	if (sendflags & PROJECTILE_SPAWN_ORIGIN)
+	{
+		vector spawn_origin = [ReadCoord(), ReadCoord(), ReadCoord()];
+		if (vlen(spawn_origin - self.s_origin) < 150)
+			self.oldorigin = spawn_origin;
 	}
 	
 	
@@ -166,13 +186,60 @@ void EntUpdate_Projectile(float is_new)
 		else if (self.modelflags & MF_GRENADE)
 			self.traileffectnum = Projectile_FindTrail(TRUE);
 		
-		self.oldorigin = self.s_origin;
+		if (self.oldorigin == '0 0 0')
+			self.oldorigin = self.s_origin;
 		
 		if !(PredProjectile_MatchProjectile())
 			is_new = 2;
-		
-		if (is_new == 2 && antilag_time)
-			self.oldorigin -= self.velocity * antilag_time;
+	}
+}
+
+void EntUpdate_WeaponDef(float is_new)
+{
+	int sendflags = ReadByte();
+	ReadByte();
+
+	if (sendflags & WEAPONDEF_INIT)
+	{
+		ReadShort();
+		ReadShort();
+	}
+
+	if (sendflags & WEAPONDEF_FLAGS)
+	{
+		ReadByte();
+		ReadByte();
+	}
+
+	if (sendflags & WEAPONDEF_ANIM)
+	{
+		int anim_number = ReadByte();
+		int k;
+		for (int i = 0; i < anim_number; ++i)
+		{
+			int anim_flags;
+			ReadByte();
+			anim_flags = ReadByte();
+			if (anim_flags & WEPPREDANIM_MOREBYTES)
+				anim_flags |= ReadByte() << 8;
+			if (anim_flags & WEPPREDANIM_SOUND)
+			{
+				ReadShort();
+				ReadShort();
+			}
+			if (anim_flags & WEPPREDANIM_PROJECTILE)
+			{
+				ReadShort();
+				for (k = 0; k < 3; ++k)
+					ReadShort();
+				for (k = 0; k < 3; ++k)
+					ReadByte();
+			}
+			ReadByte();
+			if (anim_flags & WEPPREDANIM_BRANCH)
+				ReadByte();
+			ReadByte();
+		}
 	}
 }
 
@@ -218,8 +285,9 @@ void(float is_new) CSQC_Ent_Update
 	
 	switch (ent_type)
 	{
-		case NENT_PROJECTILE: EntUpdate_Projectile(is_new); break;
-		case NENT_WEAPONPRED: EntUpdate_WeaponPred(is_new); break;
+		case EZCSQC_PROJECTILE: EntUpdate_Projectile(is_new); break;
+		case EZCSQC_WEAPONINFO: EntUpdate_WeaponPred(is_new); break;
+		case EZCSQC_WEAPONDEF: EntUpdate_WeaponDef(is_new); break;
 		
 		
 	}
@@ -237,6 +305,3 @@ void(float vwidth, float vheight, float notmenu) CSQC_UpdateView
 	addentities(MASK_ENGINE | (intermission?0:MASK_PRED_VIEWMODEL));
 	renderscene();
 }
-
-
-

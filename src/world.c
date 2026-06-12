@@ -213,6 +213,7 @@ void SP_worldspawn(void)
 
 // player precaches     
 	W_Precache();		// get weapon precaches
+	WPredict_Initialize();
 
 // sounds used from C physics code
 	trap_precache_sound("demon/dland2.wav");	// landing thud
@@ -1923,6 +1924,8 @@ void StartFrame(int time)
 	check_fcheck();
 
 	TeamplayGameTick();
+
+	UpdateProjectileSendNeeded();
 	
 	WillPause();
 	

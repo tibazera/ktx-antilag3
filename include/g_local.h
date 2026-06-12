@@ -482,6 +482,10 @@ char* make_dots(char *dots, size_t dots_len, int cmd_max_len, char *cmd);
 #define PRDFL_COILGUN	2
 #define PRDFL_FORCEOFF	255
 extern float		time_corrected;
+void			WPredict_Initialize(void);
+void			WPredict_SendDefinitionsTo(gedict_t *player);
+qbool			WeaponDefinition_SendEntity(int sendflags);
+void			UpdateProjectileSendNeeded(void);
 void			antilag_lagmove(antilag_t *data, float goal_time);
 void			antilag_lagmove_all(gedict_t *e, float goal_time);
 void			antilag_lagmove_all_hitscan(gedict_t *e);

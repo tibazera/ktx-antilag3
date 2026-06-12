@@ -83,6 +83,22 @@ typedef struct weapon_state
 weapon_state weapon_server;
 weapon_state weapon_predicted;
 
+int WeaponPred_IndexToItem(int weapon_index)
+{
+	switch (weapon_index)
+	{
+	case 0: return IT_AXE;
+	case 1: return IT_SHOTGUN;
+	case 2: return IT_SUPER_SHOTGUN;
+	case 3: return IT_NAILGUN;
+	case 4: return IT_SUPER_NAILGUN;
+	case 5: return IT_GRENADE_LAUNCHER;
+	case 6: return IT_ROCKET_LAUNCHER;
+	case 7: return IT_LIGHTNING;
+	default: return 0;
+	}
+}
+
 
 void WeaponPred_Init()
 {
@@ -1056,7 +1072,7 @@ void EntUpdate_WeaponPred(float is_new)
 	if (sendflags & 1)
 	{
 		weapon_server.impulse = ReadByte();
-		weapon_server.weapon = ReadShort();
+		weapon_server.weapon = WeaponPred_IndexToItem(ReadByte());
 	}
 	if (sendflags & 2)
 		weapon_server.ammo_shells = ReadByte();
@@ -1094,7 +1110,6 @@ void EntUpdate_WeaponPred(float is_new)
 		self.renderflags = RF_VIEWMODEL;
 	}
 }
-
 
 
 

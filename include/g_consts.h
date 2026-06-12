@@ -174,12 +174,14 @@
 #define MSG_ONE							1			// reliable to one (msg_entity)
 #define MSG_ALL							2			// reliable to all
 #define MSG_INIT						3			// write to the init string
-#define MSG_ENTITY						5			// for csqc
+#define MSG_CSQC						5			// for csqc
+#define MSG_ENTITY						MSG_CSQC
 
-#define NENT_PROJECTILE					10
-#define NENT_WEAPONPRED					20
-
-
+#define EZCSQC_WEAPONINFO				1
+#define EZCSQC_PROJECTILE				2
+#define EZCSQC_PLAYER					3
+#define EZCSQC_WEAPONDEF				4
+#define EZCSQC_HUDELEMENT				32
 
 // message levels
 #define PRINT_LOW						0			// pickup messages
