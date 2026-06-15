@@ -30,7 +30,7 @@ static void antilag_mark_projectile_runtime(gedict_t *e)
 
 static int antilag_check_new_projectile_spawn_touch(gedict_t *owner, gedict_t *e, float rewind_time)
 {
-	vec3_t old_origin, push;
+	vec3_t push;
 	gedict_t *old_self;
 	float fraction;
 	float speed;
@@ -50,7 +50,6 @@ static int antilag_check_new_projectile_spawn_touch(gedict_t *owner, gedict_t *e
 	}
 
 	antilag_lagmove_all_playeronly(owner, rewind_time);
-	VectorCopy(e->s.v.origin, old_origin);
 	old_self = self;
 	self = e;
 	self->s.v.flags = ((int)self->s.v.flags) | FL_GODMODE;
@@ -59,8 +58,6 @@ static int antilag_check_new_projectile_spawn_touch(gedict_t *owner, gedict_t *e
 
 	if (fraction < 1 || g_globalvars.trace_startsolid)
 		return true;
-
-	trap_setorigin(NUM_FOR_EDICT(e), PASSVEC3(old_origin));
 
 	return false;
 }
