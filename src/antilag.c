@@ -20,39 +20,41 @@ vec3_t antilag_retvec;
 float time_corrected;
 
 void antilag_lagmove_all_playeronly(gedict_t *e, float ms);
+float Physics_PushEntity(float push_x, float push_y, float push_z, int failonstartsolid);
 
 static int antilag_check_new_projectile_spawn_touch(gedict_t *owner, gedict_t *e, float rewind_time)
 {
-	vec3_t end;
+	vec3_t old_origin, push;
+	gedict_t *old_self;
+	float fraction;
 	float speed;
 
 	if (newmis != e)
 		return false;
 
 	speed = VectorLength(e->s.v.velocity);
-	VectorCopy(e->s.v.origin, end);
+	VectorClear(push);
 	if (speed > 1)
 	{
 		/*
-		 * Classic newmis performs an immediate 0.05s sweep so close wall/floor
-		 * shots explode before the next server frame. Keep that collision
-		 * reach, but do not commit the travel when the sweep misses.
+		 * Classic newmis performs an immediate 0.05s authoritative sweep.
+		 * The client has a separate 0.02s render lookahead; keep that visual.
 		 */
-		VectorMA(end, 0.05, e->s.v.velocity, end);
+		VectorMA(push, 0.05, e->s.v.velocity, push);
 	}
 
 	antilag_lagmove_all_playeronly(owner, rewind_time);
-	traceline(PASSVEC3(e->s.v.origin), PASSVEC3(end), false, e);
+	VectorCopy(e->s.v.origin, old_origin);
+	old_self = self;
+	self = e;
+	self->s.v.flags = ((int)self->s.v.flags) | FL_GODMODE;
+	fraction = Physics_PushEntity(PASSVEC3(push), false);
+	self = old_self;
 
-	if (g_globalvars.trace_fraction < 1 || g_globalvars.trace_startsolid)
-	{
-		trap_setorigin(NUM_FOR_EDICT(e), PASSVEC3(g_globalvars.trace_endpos));
-		other = PROG_TO_EDICT(g_globalvars.trace_ent);
-		self = e;
-		self->s.v.flags = ((int)self->s.v.flags) | FL_GODMODE;
-		((void(*)(void))(self->touch))();
+	if (fraction < 1 || g_globalvars.trace_startsolid)
 		return true;
-	}
+
+	trap_setorigin(NUM_FOR_EDICT(e), PASSVEC3(old_origin));
 
 	return false;
 }
@@ -799,9 +801,4 @@ void antilag_lagmove_all_proj_bounce(gedict_t *owner, gedict_t *e)
 	// restore origins to held values
 	antilag_unmove_all();
 }
-
-
-
-
-
 
