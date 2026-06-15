@@ -34,6 +34,7 @@ static int antilag_check_new_projectile_spawn_touch(gedict_t *owner, gedict_t *e
 	gedict_t *old_self;
 	float fraction;
 	float speed;
+	int original_flags;
 
 	if (newmis != e)
 		return false;
@@ -52,6 +53,7 @@ static int antilag_check_new_projectile_spawn_touch(gedict_t *owner, gedict_t *e
 	antilag_lagmove_all_playeronly(owner, rewind_time);
 	old_self = self;
 	self = e;
+	original_flags = (int)self->s.v.flags;
 	self->s.v.flags = ((int)self->s.v.flags) | FL_GODMODE;
 	fraction = Physics_PushEntity(PASSVEC3(push), false);
 	self = old_self;
@@ -59,6 +61,7 @@ static int antilag_check_new_projectile_spawn_touch(gedict_t *owner, gedict_t *e
 	if (fraction < 1 || g_globalvars.trace_startsolid)
 		return true;
 
+	e->s.v.flags = original_flags;
 	return false;
 }
 
