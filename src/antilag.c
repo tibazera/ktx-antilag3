@@ -22,6 +22,12 @@ float time_corrected;
 void antilag_lagmove_all_playeronly(gedict_t *e, float ms);
 float Physics_PushEntity(float push_x, float push_y, float push_z, int failonstartsolid);
 
+static void antilag_mark_projectile_runtime(gedict_t *e)
+{
+	if (HAVEEXTENSION(G_SETLASTRUNTIME))
+		trap_SetLastRuntime(NUM_FOR_EDICT(e));
+}
+
 static int antilag_check_new_projectile_spawn_touch(gedict_t *owner, gedict_t *e, float rewind_time)
 {
 	vec3_t old_origin, push;
@@ -655,6 +661,7 @@ void antilag_lagmove_all_proj(gedict_t *owner, gedict_t *e)
 	e->s.v.armorvalue = ms;
 
 	oself = self;
+	antilag_mark_projectile_runtime(e);
 
 	step_time = min(cvar("sv_mintic"), ms);
 	if (step_time * VectorLength(e->s.v.velocity) > 3)
@@ -766,6 +773,7 @@ void antilag_lagmove_all_proj_bounce(gedict_t *owner, gedict_t *e)
 	e->s.v.armorvalue = ms;
 
 	oself = self;
+	antilag_mark_projectile_runtime(e);
 	self = e;
 
 	step_time = min(cvar("sv_mintic"), ms);
@@ -801,4 +809,3 @@ void antilag_lagmove_all_proj_bounce(gedict_t *owner, gedict_t *e)
 	// restore origins to held values
 	antilag_unmove_all();
 }
-

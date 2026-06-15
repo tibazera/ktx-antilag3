@@ -689,6 +689,7 @@ static qbool G_InitExtensions(void)
 		{"SetExtFieldPtr",		G_SETEXTFIELDPTR},
 		{"GetExtFieldPtr",		G_GETEXTFIELDPTR},
 		{"setsendneeded",		G_SETSENDNEEDED},
+		{"SetLastRuntime",		G_SETLASTRUNTIME},
 		{"sprayclear",			G_SPRAYCLEAR},
 		{"sprayclearall",		G_SPRAYCLEARALL},
 	};
