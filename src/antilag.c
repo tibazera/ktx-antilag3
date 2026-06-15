@@ -618,7 +618,18 @@ void antilag_lagmove_all_proj(gedict_t *owner, gedict_t *e)
 	if (cvar("sv_antilag") != 1)
 		return;
 
-	ms -= (ms < ANTILAG_MAX_PREDICTION ? (1 / 77.0) : ANTILAG_MAX_PREDICTION);
+	/*
+	 * Do not subtract ANTILAG_MAX_PREDICTION here. That mvdsv-derived offset is
+	 * for estimating predicted player hitbox time in hitscan rewind. Projectiles
+	 * are new objects fired from client input, and CSQC renders them immediately
+	 * from the same native newmis phase, so the authoritative projectile must be
+	 * advanced by the full input-to-server time up to the projectile horizon.
+	 */
+	// ms -= (ms < ANTILAG_MAX_PREDICTION ? (1 / 77.0) : ANTILAG_MAX_PREDICTION);
+
+	/* A one-frame ping has no meaningful catch-up beyond the native newmis step. */
+	if (ms <= (1 / 77.0))
+		ms = 0;
 
 	if (ms > ANTILAG_REWIND_MAXPROJECTILE)
 		ms = ANTILAG_REWIND_MAXPROJECTILE;
@@ -732,7 +743,17 @@ void antilag_lagmove_all_proj_bounce(gedict_t *owner, gedict_t *e)
 	if (cvar("sv_antilag") != 1)
 		return;
 
-	ms -= (ms < ANTILAG_MAX_PREDICTION ? (1 / 77.0) : ANTILAG_MAX_PREDICTION);
+	/*
+	 * Keep bounce projectiles on the same timing model as other projectiles:
+	 * full input-to-server time, capped by ANTILAG_REWIND_MAXPROJECTILE. The
+	 * ANTILAG_MAX_PREDICTION subtraction belongs to player hitbox estimation,
+	 * not to projectile flight phase.
+	 */
+	// ms -= (ms < ANTILAG_MAX_PREDICTION ? (1 / 77.0) : ANTILAG_MAX_PREDICTION);
+	
+	/* A one-frame ping has no meaningful catch-up beyond the native newmis step. */
+	if (ms <= (1 / 77.0))
+		ms = 0;
 
 	if (ms > ANTILAG_REWIND_MAXPROJECTILE)
 		ms = ANTILAG_REWIND_MAXPROJECTILE;
