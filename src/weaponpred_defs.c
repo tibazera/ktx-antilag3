@@ -136,13 +136,19 @@ void WPredict_Initialize(void)
 	memset(wpredict_definitions, 0, sizeof(wpredict_definitions));
 	memset(wpredict_definition_ents, 0, sizeof(wpredict_definition_ents));
 
-	sg = &wpredict_definitions[1];
-	ssg = &wpredict_definitions[2];
-	ng = &wpredict_definitions[3];
-	sng = &wpredict_definitions[4];
-	gl = &wpredict_definitions[5];
-	rl = &wpredict_definitions[6];
-	lg = &wpredict_definitions[7];
+	sg = &wpredict_definitions[2];
+	ssg = &wpredict_definitions[3];
+	ng = &wpredict_definitions[4];
+	sng = &wpredict_definitions[5];
+	gl = &wpredict_definitions[6];
+	rl = &wpredict_definitions[7];
+	lg = &wpredict_definitions[8];
+
+	/*
+	 * Index 1 is intentionally left without an axe weapondef. Static setup
+	 * weapondefs are currently real worldspawn-time QC edicts; adding axe changed
+	 * early edict allocation enough to disturb startup/spawn behavior.
+	 */
 
 	// SHOTGUN
 	player_shot0 = &sg->anim_states[0];
