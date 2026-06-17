@@ -816,10 +816,10 @@ typedef struct fb_entvars_s {
 typedef struct weppredanim_s
 {
 	signed char		mdlframe;
-	unsigned short	flags;
-	unsigned short	sound;
-	unsigned short	soundmask;
-	unsigned short	projectile_model;
+	int				flags;
+	int				sound;
+	int				soundmask;
+	int				projectile_model;
 	short			projectile_velocity[3];
 	signed char		projectile_offset[3];
 	byte			nextanim;
@@ -829,8 +829,8 @@ typedef struct weppredanim_s
 
 typedef struct weppreddef_s
 {
-	unsigned short	modelindex;
-	unsigned short	attack_time;
+	int				modelindex;
+	int				attack_time;
 
 	byte			impulse;
 	int				itemflag;
