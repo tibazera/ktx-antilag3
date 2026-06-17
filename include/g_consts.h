@@ -219,6 +219,7 @@
 #define	SVC_UPDATEENTERTIME				37
 #define SVC_MUZZLEFLASH					39
 #define SVC_UPDATEUSERINFO				40
+#define SVC_EZCSQC_SETUP				77
 
 #define TE_SPIKE						0
 #define TE_SUPERSPIKE					1

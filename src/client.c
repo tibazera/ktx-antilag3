@@ -1677,6 +1677,16 @@ void WeaponPrediction_MarkSendFlags(void)
 	gedict_t *wep = self->weapon_pred;
 	int sendflags = WEAPONINFO_TIMING;
 
+	if (!wep->cnt2 && iKey(self, "ezcsqc"))
+	{
+		WPredict_SendDefinitionsTo(self);
+		wep->cnt2 = 1;
+	}
+
+	if (!iKey(self, "ezcsqc_ready"))
+	{
+		return;
+	}
 
 	if (wep->s.v.impulse != self->s.v.impulse || wep->s.v.weapon != self->weapon_index)
 	{
@@ -1754,10 +1764,18 @@ void WeaponPrediction_CreateEnt(void)
 	wep_values->client_predflags = -1;
 	wep_values->client_ping = -1;
 	wep_values->cnt = 0;
+	wep_values->cnt2 = 0;
 	ExtFieldSetSendEntity(wep_values, (func_t)WeaponPrediction_SendEntity);
 	ExtFieldSetPvsFlags(wep_values, 3);
-	WPredict_SendDefinitionsTo(self);
-	SetSendNeeded(wep_values, 0xFFFFFF, NUM_FOR_EDICT(self));
+	if (iKey(self, "ezcsqc"))
+	{
+		WPredict_SendDefinitionsTo(self);
+		wep_values->cnt2 = 1;
+	}
+	if (iKey(self, "ezcsqc_ready"))
+	{
+		SetSendNeeded(wep_values, 0xFFFFFF, NUM_FOR_EDICT(self));
+	}
 	self->weapon_pred = wep_values;
 }
 

@@ -1,9 +1,21 @@
 #include "g_local.h"
 
 weppreddef_t wpredict_definitions[16];
-static gedict_t *wpredict_definition_ents[16];
 
-static qbool WeaponDefinition_Write(int weapon_index, int sendflags)
+static qbool WeaponDefinition_Exists(int weapon_index)
+{
+	weppreddef_t *wep;
+
+	if (weapon_index < 0 || weapon_index >= (int)(sizeof(wpredict_definitions) / sizeof(wpredict_definitions[0])))
+	{
+		return false;
+	}
+
+	wep = &wpredict_definitions[weapon_index];
+	return wep->modelindex || wep->anim_number;
+}
+
+static qbool WeaponDefinition_WriteTo(int to, int weapon_index, int sendflags)
 {
 	weppreddef_t *wep;
 	int i, k;
@@ -15,23 +27,23 @@ static qbool WeaponDefinition_Write(int weapon_index, int sendflags)
 
 	sendflags &= WEAPONDEF_INIT | WEAPONDEF_FLAGS | WEAPONDEF_ANIM;
 
-	WriteByte(MSG_CSQC, EZCSQC_WEAPONDEF);
-	WriteByte(MSG_CSQC, sendflags);
+	WriteByte(to, EZCSQC_WEAPONDEF);
+	WriteByte(to, sendflags);
 
 	wep = &wpredict_definitions[weapon_index];
-	WriteByte(MSG_CSQC, weapon_index);
+	WriteByte(to, weapon_index);
 
 	if (sendflags & WEAPONDEF_INIT)
 	{
-		WriteShort(MSG_CSQC, wep->attack_time);
-		WriteShort(MSG_CSQC, wep->modelindex);
+		WriteShort(to, wep->attack_time);
+		WriteShort(to, wep->modelindex);
 	}
 
 	if (sendflags & WEAPONDEF_FLAGS)
 	{
 		int bitmask = 0;
 
-		WriteByte(MSG_CSQC, wep->impulse);
+		WriteByte(to, wep->impulse);
 
 		for (i = 0; i < 24; i++)
 		{
@@ -39,92 +51,95 @@ static qbool WeaponDefinition_Write(int weapon_index, int sendflags)
 			if (bitmask & wep->itemflag)
 			{
 				bitmask = -1;
-				WriteByte(MSG_CSQC, i);
+				WriteByte(to, i);
 				break;
 			}
 		}
 		if (bitmask != -1)
 		{
-			WriteByte(MSG_CSQC, 255);
+			WriteByte(to, 255);
 		}
 	}
 
 	if (sendflags & WEAPONDEF_ANIM)
 	{
-		WriteByte(MSG_CSQC, wep->anim_number & 255);
+		WriteByte(to, wep->anim_number & 255);
 		for (i = 0; i < wep->anim_number; i++)
 		{
 			weppredanim_t *anim = &wep->anim_states[i];
 
-			WriteByte(MSG_CSQC, anim->mdlframe + 127);
-			WriteByte(MSG_CSQC, anim->flags);
+			WriteByte(to, anim->mdlframe + 127);
+			WriteByte(to, anim->flags);
 			if (anim->flags & WEPPREDANIM_MOREBYTES)
 			{
-				WriteByte(MSG_CSQC, anim->flags >> 8);
+				WriteByte(to, anim->flags >> 8);
 			}
 			if (anim->flags & WEPPREDANIM_SOUND)
 			{
-				WriteShort(MSG_CSQC, anim->sound);
-				WriteShort(MSG_CSQC, anim->soundmask);
+				WriteShort(to, anim->sound);
+				WriteShort(to, anim->soundmask);
 			}
 			if (anim->flags & WEPPREDANIM_PROJECTILE)
 			{
-				WriteShort(MSG_CSQC, anim->projectile_model);
+				WriteShort(to, anim->projectile_model);
 				for (k = 0; k < 3; k++)
 				{
-					WriteShort(MSG_CSQC, anim->projectile_velocity[k]);
+					WriteShort(to, anim->projectile_velocity[k]);
 				}
 				for (k = 0; k < 3; k++)
 				{
-					WriteByte(MSG_CSQC, anim->projectile_offset[k] & 255);
+					WriteByte(to, anim->projectile_offset[k] & 255);
 				}
 			}
-			WriteByte(MSG_CSQC, anim->nextanim);
+			WriteByte(to, anim->nextanim);
 			if (anim->flags & WEPPREDANIM_BRANCH)
 			{
-				WriteByte(MSG_CSQC, anim->altanim);
+				WriteByte(to, anim->altanim);
 			}
-			WriteByte(MSG_CSQC, anim->length / 10);
+			WriteByte(to, anim->length / 10);
 		}
 	}
 
 	return true;
 }
 
-qbool WeaponDefinition_SendEntity(int sendflags)
-{
-	return WeaponDefinition_Write((int)self->s.v.weapon, sendflags);
-}
-
-static void WPredict_SpawnDefinition(int weapon_index)
-{
-	gedict_t *wepdef = spawn();
-
-	ExtFieldSetPvsFlags(wepdef, 3);
-	ExtFieldSetSendEntity(wepdef, (func_t)WeaponDefinition_SendEntity);
-	wepdef->s.v.weapon = weapon_index;
-	wpredict_definition_ents[weapon_index] = wepdef;
-	SetSendNeeded(wepdef, SENDFLAGS_ALL, 0);
-}
-
 void WPredict_SendDefinitionsTo(gedict_t *player)
 {
 	int i;
-	int player_num;
+	int count = 0;
+	int old_msg_entity;
 
 	if (!player)
 	{
 		return;
 	}
 
-	player_num = NUM_FOR_EDICT(player);
-	for (i = 0; i < (int)(sizeof(wpredict_definition_ents) / sizeof(wpredict_definition_ents[0])); i++)
+	if (!iKey(player, "ezcsqc"))
 	{
-		if (wpredict_definition_ents[i])
+		return;
+	}
+
+	for (i = 0; i < (int)(sizeof(wpredict_definitions) / sizeof(wpredict_definitions[0])); i++)
+	{
+		if (WeaponDefinition_Exists(i))
 		{
-			SetSendNeeded(wpredict_definition_ents[i], SENDFLAGS_ALL, player_num);
+			count++;
 		}
 	}
+
+	old_msg_entity = g_globalvars.msg_entity;
+	g_globalvars.msg_entity = EDICT_TO_PROG(player);
+	WriteByte(MSG_ONE, SVC_EZCSQC_SETUP);
+	WriteByte(MSG_ONE, 1);
+	WriteByte(MSG_ONE, count);
+	for (i = 0; i < (int)(sizeof(wpredict_definitions) / sizeof(wpredict_definitions[0])); i++)
+	{
+		if (WeaponDefinition_Exists(i))
+		{
+			WeaponDefinition_WriteTo(MSG_ONE, i, SENDFLAGS_ALL);
+		}
+	}
+	g_globalvars.msg_entity = old_msg_entity;
 }
 
 void WPredict_Initialize(void)
@@ -134,7 +149,6 @@ void WPredict_Initialize(void)
 	weppredanim_t *player_shot3, *player_shot4, *player_shot5, *player_shot6;
 
 	memset(wpredict_definitions, 0, sizeof(wpredict_definitions));
-	memset(wpredict_definition_ents, 0, sizeof(wpredict_definition_ents));
 
 	sg = &wpredict_definitions[2];
 	ssg = &wpredict_definitions[3];
@@ -144,11 +158,7 @@ void WPredict_Initialize(void)
 	rl = &wpredict_definitions[7];
 	lg = &wpredict_definitions[8];
 
-	/*
-	 * Index 1 is intentionally left without an axe weapondef. Static setup
-	 * weapondefs are currently real worldspawn-time QC edicts; adding axe changed
-	 * early edict allocation enough to disturb startup/spawn behavior.
-	 */
+	/* Index 1 is intentionally left without an axe weapondef until axe prediction is client-only. */
 
 	// SHOTGUN
 	player_shot0 = &sg->anim_states[0];
@@ -188,8 +198,6 @@ void WPredict_Initialize(void)
 	player_shot6->nextanim = 0;
 	player_shot6->length = 100;
 
-	WPredict_SpawnDefinition(sg - wpredict_definitions);
-
 	// SUPER SHOTGUN
 	player_shot0 = &ssg->anim_states[0];
 	player_shot1 = &ssg->anim_states[1];
@@ -228,8 +236,6 @@ void WPredict_Initialize(void)
 	player_shot6->nextanim = 0;
 	player_shot6->length = 100;
 
-	WPredict_SpawnDefinition(ssg - wpredict_definitions);
-
 	// NAILGUN
 	player_shot0 = &ng->anim_states[0];
 	player_shot1 = &ng->anim_states[1];
@@ -265,8 +271,6 @@ void WPredict_Initialize(void)
 	player_shot2->projectile_offset[0] = -4;
 	player_shot2->projectile_offset[2] = 16;
 
-	WPredict_SpawnDefinition(ng - wpredict_definitions);
-
 	// SUPER NAILGUN
 	player_shot0 = &sng->anim_states[0];
 	player_shot1 = &sng->anim_states[1];
@@ -291,8 +295,6 @@ void WPredict_Initialize(void)
 	player_shot1->projectile_offset[2] = 16;
 	*player_shot2 = *player_shot1;
 	player_shot2->nextanim = 1;
-
-	WPredict_SpawnDefinition(sng - wpredict_definitions);
 
 	// GRENADE LAUNCHER
 	player_shot0 = &gl->anim_states[0];
@@ -334,8 +336,6 @@ void WPredict_Initialize(void)
 	player_shot6->mdlframe = 6;
 	player_shot6->nextanim = 0;
 	player_shot6->length = 100;
-
-	WPredict_SpawnDefinition(gl - wpredict_definitions);
 
 	// ROCKET LAUNCHER
 	player_shot0 = &rl->anim_states[0];
@@ -379,8 +379,6 @@ void WPredict_Initialize(void)
 	player_shot6->nextanim = 0;
 	player_shot6->length = 100;
 
-	WPredict_SpawnDefinition(rl - wpredict_definitions);
-
 	// LIGHTNING GUN
 	player_shot0 = &lg->anim_states[0];
 	player_shot1 = &lg->anim_states[1];
@@ -409,5 +407,4 @@ void WPredict_Initialize(void)
 	player_shot2->altanim = 0;
 	player_shot2->sound = trap_precache_sound("weapons/lhit.wav");
 	player_shot2->soundmask = 0x0100;
-	WPredict_SpawnDefinition(lg - wpredict_definitions);
 }
