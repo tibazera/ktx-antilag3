@@ -774,6 +774,11 @@ typedef struct fb_entvars_s {
 #define ANTILAG_REWIND_MAXHITSCAN	 0.250
 #define ANTILAG_REWIND_MAXPROJECTILE 0.080
 #define ANTILAG_TIMESTEP 0.01
+
+/* Antilag 3: target-side catch-up ghost. Quantization ceiling is intentionally
+ * above ANTILAG_REWIND_MAXPROJECTILE so future tweaks to the catch-up cap don't
+ * saturate the wire byte silently. */
+#define ANTILAG3_CATCHUP_QUANT_CEILING 0.100
 //#define ANTILAG_XERP 0
 #define ANTILAG_MAX_PREDICTION 0.02
 #define ANTILAG_MAX_XERP 0.02
@@ -811,7 +816,12 @@ typedef struct fb_entvars_s {
 #define PROJECTILE_ANGLES		(1 << 2)
 #define PROJECTILE_OWNER		(1 << 3)
 #define PROJECTILE_SPAWN_ORIGIN	(1 << 4)
-#define PROJECTILE_INITIAL		(PROJECTILE_ORIGIN | PROJECTILE_MODEL | PROJECTILE_ANGLES | PROJECTILE_OWNER | PROJECTILE_SPAWN_ORIGIN)
+/* Antilag 3: carries how much antilag catch-up (seconds, quantized to a byte)
+ * was applied to this projectile's spawn. Only set when catch-up > 0, so it
+ * is purely additive on the wire. See SendEntity_Projectile() in weapons.c
+ * and antilag_lagmove_all_proj() in antilag.c (armorvalue is the source). */
+#define PROJECTILE_CATCHUP		(1 << 5)
+#define PROJECTILE_INITIAL		(PROJECTILE_ORIGIN | PROJECTILE_MODEL | PROJECTILE_ANGLES | PROJECTILE_OWNER | PROJECTILE_SPAWN_ORIGIN | PROJECTILE_CATCHUP)
 
 typedef struct weppredanim_s
 {

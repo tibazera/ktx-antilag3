@@ -80,6 +80,14 @@ qbool SendEntity_Projectile(int sendflags)
 		sendflags &= ~PROJECTILE_SPAWN_ORIGIN;
 	}
 
+	/* Antilag 3: only advertise catch-up when this spawn actually had any.
+	 * self->s.v.armorvalue is set to `ms` (seconds) by antilag_lagmove_all_proj()/
+	 * _bounce() in antilag.c and is otherwise unused on projectile edicts. */
+	if (self->s.v.armorvalue <= 0)
+	{
+		sendflags &= ~PROJECTILE_CATCHUP;
+	}
+
 	WriteByte(MSG_CSQC, sendflags);
 
 
@@ -121,6 +129,12 @@ qbool SendEntity_Projectile(int sendflags)
 		WriteCoord(MSG_CSQC, self->pos1[0]);
 		WriteCoord(MSG_CSQC, self->pos1[1]);
 		WriteCoord(MSG_CSQC, self->pos1[2]);
+	}
+
+	if (sendflags & PROJECTILE_CATCHUP)
+	{
+		int quantized = (int)bound(0, (self->s.v.armorvalue / ANTILAG3_CATCHUP_QUANT_CEILING) * 255, 255);
+		WriteByte(MSG_CSQC, quantized);
 	}
 
 	return true;
