@@ -779,6 +779,17 @@ typedef struct fb_entvars_s {
  * above ANTILAG_REWIND_MAXPROJECTILE so future tweaks to the catch-up cap don't
  * saturate the wire byte silently. */
 #define ANTILAG3_CATCHUP_QUANT_CEILING 0.100
+
+/*
+ * sv_antilag 3 ("Antilag 3") runs the exact same rewind math as sv_antilag 1
+ * (ANTILAG_ENABLED() is intentionally identical for both), and differs only
+ * in SendEntity_Projectile() (weapons.c), which additionally advertises
+ * PROJECTILE_CATCHUP to clients when sv_antilag is 3, arming the target-side
+ * ghost trail in unezquake-antilag3. This lets operators A/B antilag 1 vs
+ * antilag 3 by changing a single server cvar, with identical physics/
+ * collision/hit outcomes in both modes -- see ANTILAG3.md.
+ */
+#define ANTILAG_ENABLED() (cvar("sv_antilag") == 1 || cvar("sv_antilag") == 3)
 //#define ANTILAG_XERP 0
 #define ANTILAG_MAX_PREDICTION 0.02
 #define ANTILAG_MAX_XERP 0.02

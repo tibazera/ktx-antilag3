@@ -19,6 +19,8 @@ vec3_t antilag_origin;
 vec3_t antilag_retvec;
 float time_corrected;
 
+/* ANTILAG_ENABLED() is defined in progs.h and shared with weapons.c. */
+
 void antilag_lagmove_all_playeronly(gedict_t *e, float ms);
 float Physics_PushEntity(float push_x, float push_y, float push_z, int failonstartsolid);
 
@@ -561,7 +563,7 @@ void antilag_lagmove_all_nohold(gedict_t *e, float ms, int plat_rewind)
 
 void antilag_unmove_specific(gedict_t *ent)
 {
-	if (cvar("sv_antilag") != 1)
+	if (!ANTILAG_ENABLED())
 		return;
 
 	if (time_corrected >= g_globalvars.time)
@@ -574,7 +576,7 @@ void antilag_unmove_all(void)
 {
 	antilag_t *list;
 
-	if (cvar("sv_antilag") != 1)
+	if (!ANTILAG_ENABLED())
 		return;
 
 	time_corrected = g_globalvars.time;
@@ -597,7 +599,7 @@ void antilag_lagmove_all_hitscan(gedict_t *e)
 {
 	float ms = (atof(ezinfokey(e, "ping")) / 1000);
 
-	if (cvar("sv_antilag") != 1)
+	if (!ANTILAG_ENABLED())
 		return;
 
 	ms -= (ms < ANTILAG_MAX_PREDICTION ? (1 / 77.0) : ANTILAG_MAX_PREDICTION);
@@ -618,7 +620,7 @@ void antilag_lagmove_all_proj(gedict_t *owner, gedict_t *e)
 	vec3_t old_org;
 	gedict_t *oself;
 
-	if (cvar("sv_antilag") != 1)
+	if (!ANTILAG_ENABLED())
 		return;
 
 	/*
@@ -743,7 +745,7 @@ void antilag_lagmove_all_proj_bounce(gedict_t *owner, gedict_t *e)
 	vec3_t old_org;
 	gedict_t *oself;
 	
-	if (cvar("sv_antilag") != 1)
+	if (!ANTILAG_ENABLED())
 		return;
 
 	/*

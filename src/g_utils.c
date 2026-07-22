@@ -1904,6 +1904,8 @@ char* AntilagModeString(float f)
 		new_antilag_string = "'1 - KTX'";
 	else if (f == 2)
 		new_antilag_string = "'2 - MVDSV'";
+	else if (f == 3)
+		new_antilag_string = "'3 - KTX + target-side ghost (Antilag 3, testing)'";
 
 	return new_antilag_string;
 }

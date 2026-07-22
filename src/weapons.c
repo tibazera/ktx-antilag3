@@ -80,14 +80,20 @@ qbool SendEntity_Projectile(int sendflags)
 		sendflags &= ~PROJECTILE_SPAWN_ORIGIN;
 	}
 
-	/* Antilag 3: only advertise catch-up when this spawn actually had any.
+	/*
+	 * Antilag 3: only advertise catch-up when sv_antilag is specifically 3
+	 * (not plain 1) and this spawn actually had any. This is the ONLY
+	 * behavioral difference between sv_antilag 1 and sv_antilag 3 -- every
+	 * other check in antilag.c/weapons.c treats them identically via
+	 * ANTILAG_ENABLED(), so rewind math, collision and damage are the same
+	 * in both modes; only whether the target-side ghost gets armed differs.
 	 * self->s.v.armorvalue is set to `ms` (seconds) by antilag_lagmove_all_proj()/
 	 * _bounce() in antilag.c and is otherwise unused on projectile edicts.
 	 * WARNING: this field is reused, not dedicated -- if any other server QC/
 	 * mod code writes to armorvalue on a projectile edict for an unrelated
 	 * reason, the ghost will fire on garbage data. Do not repurpose this
 	 * field further without updating antilag.c and this comment together. */
-	if (self->s.v.armorvalue <= 0)
+	if (cvar("sv_antilag") != 3 || self->s.v.armorvalue <= 0)
 	{
 		sendflags &= ~PROJECTILE_CATCHUP;
 	}
@@ -1172,7 +1178,7 @@ void T_MissileTouch(void)
 	// don't do radius damage to the other, because all the damage
 	// was done in the impact
 	///*
-	if (cvar("sv_antilag") == 1) // if this is an anti lag rocket, ignore our owner
+	if (ANTILAG_ENABLED()) // if this is an anti lag rocket, ignore our owner
 	{
 		float delay;
 		vec3_t diff, traveled;
@@ -1319,7 +1325,7 @@ void W_FireRocket(void)
 	BotsRocketSpawned(newmis);
 #endif
 
-	if (cvar("sv_antilag") == 1)
+	if (ANTILAG_ENABLED())
 	{
 		g_globalvars.newmis = EDICT_TO_PROG(world);
 		newmis = world;
@@ -1710,7 +1716,7 @@ void W_FireGrenade(void)
 #endif
 	
 	// we don't want to do newmis stuff, antilag 1 takes care of it for us
-	if (cvar("sv_antilag") == 1)
+	if (ANTILAG_ENABLED())
 	{
 		g_globalvars.newmis = EDICT_TO_PROG(world);
 		newmis = world;
@@ -1962,7 +1968,7 @@ void W_FireSuperSpikes(void)
 	antilag_unmove_all();
 	ScheduleProjectileSendIfLive(newmis);
 
-	if (cvar("sv_antilag") == 1)
+	if (ANTILAG_ENABLED())
 	{
 		g_globalvars.newmis = EDICT_TO_PROG(world);
 		newmis = world;
@@ -2030,7 +2036,7 @@ void W_FireSpikes(float ox)
 	ScheduleProjectileSendIfLive(newmis);
 	
 
-	if (cvar("sv_antilag") == 1)
+	if (ANTILAG_ENABLED())
 	{
 		g_globalvars.newmis = EDICT_TO_PROG(world);
 		newmis = world;
