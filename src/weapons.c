@@ -82,7 +82,11 @@ qbool SendEntity_Projectile(int sendflags)
 
 	/* Antilag 3: only advertise catch-up when this spawn actually had any.
 	 * self->s.v.armorvalue is set to `ms` (seconds) by antilag_lagmove_all_proj()/
-	 * _bounce() in antilag.c and is otherwise unused on projectile edicts. */
+	 * _bounce() in antilag.c and is otherwise unused on projectile edicts.
+	 * WARNING: this field is reused, not dedicated -- if any other server QC/
+	 * mod code writes to armorvalue on a projectile edict for an unrelated
+	 * reason, the ghost will fire on garbage data. Do not repurpose this
+	 * field further without updating antilag.c and this comment together. */
 	if (self->s.v.armorvalue <= 0)
 	{
 		sendflags &= ~PROJECTILE_CATCHUP;
@@ -133,7 +137,7 @@ qbool SendEntity_Projectile(int sendflags)
 
 	if (sendflags & PROJECTILE_CATCHUP)
 	{
-		int quantized = (int)bound(0, (self->s.v.armorvalue / ANTILAG3_CATCHUP_QUANT_CEILING) * 255, 255);
+		int quantized = (int)bound(0, (self->s.v.armorvalue / ANTILAG3_CATCHUP_QUANT_CEILING) * 255 + 0.5, 255);
 		WriteByte(MSG_CSQC, quantized);
 	}
 
