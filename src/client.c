@@ -4807,7 +4807,7 @@ void PlayerPostThink(void)
 	//
 	// Antilag and Weapon Prediction
 	antilag_log(self, self->antilag_data);
-	if (cvar("sv_antilag") == 1)
+	if (ANTILAG_ENABLED())
 	{
 		self->client_ping = atof(ezinfokey(self, "ping"));
 		if (cvar("k_midair") && (self->super_damage_finished > g_globalvars.time - (self->client_ping)/1000))
